@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <title>Geometry Dash 3D</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #111;
+    }
+    #gameContainer {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+    }
+    #score {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      color: white;
+      font-family: Arial, sans-serif;
+      font-size: 24px;
+      z-index: 10;
+    }
+    #instructions {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      color: white;
+      font-family: Arial, sans-serif;
+      font-size: 16px;
+      z-index: 10;
+    }
+  </style>
+</head>
+<body>
+  <div id="gameContainer">
+    <div id="score">Punkty: 0</div>
+    <div id="instructions">Naciśnij SPACJĘ, aby skakać</div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>
+    // Inicjalizacja sceny
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.getElementById('gameContainer').appendChild(renderer.domElement);
+
+    // Światło
+    const light = new THREE.DirectionalLight(0xffffff, 1);
+    light.position.set(0, 10, 5);
+    scene.add(light);
+
+    // Gracz (sześcian)
+    const playerGeometry = new THREE.BoxGeometry(1, 1, 1);
+    const playerMaterial = new THREE.MeshPhongMaterial({ color: 0x00ff00 });
+    const player = new THREE.Mesh(playerGeometry, playerMaterial);
+    player.position.set(-5, 0, 0);
+    scene.add(player);
+
+    // Podłoga
+    const floorGeometry = new THREE.PlaneGeometry(100, 10);
+    const floorMaterial = new THREE.MeshPhongMaterial({ color: 0x333333, side: THREE.DoubleSide });
+    const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+    floor.rotation.x = Math.PI / 2;
+    floor.position.y = -1;
+    floor.position.z = -10;
+    scene.add(floor);
+
+    // Kamera
+    camera.position.set(0, 2, 5);
+    camera.lookAt(player.position);
+
+    // Zmienne gry
+    let isJumping = false;
+    let velocityY = 0;
+    let gravity = 0.2;
+    let jumpPower = 0.5;
+    let obstacles = [];
+    let score = 0;
+    let gameSpeed = 0.2;
+    let gameOver = false;
+
+    // Obsługa skoku
+    function jump() {
+      if (!isJumping && !gameOver) {
+        velocityY = jumpPower;
+        isJumping = true;
+      }
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') {
+        jump();
+      }
+    });
+
+    // Tworzenie przeszkód
+    function createObstacle() {
+      const geometry = new THREE.BoxGeometry(1, 2, 1);
+      const material = new THREE.MeshPhongMaterial({ color: 0xff0000 });
+      const obstacle = new THREE.Mesh(geometry, material);
+      obstacle.position.set(10, 0, -10);
+      scene.add(obstacle);
+      obstacles.push(obstacle);
+    }
+
+    // Kolizja
+    function checkCollision(obj1, obj2) {
+      const box1 = new THREE.Box3().setFromObject(obj1);
+      const box2 = new THREE.Box3().setFromObject(obj2);
+      return box1.intersectsBox(box2);
+    }
+
+    // Reset gry
+    function resetGame() {
+      // Usuń przeszkody
+      obstacles.forEach(obs => scene.remove(obs));
+      obstacles = [];
+      
+      // Resetuj gracza
+      player.position.y = 0;
+      velocityY = 0;
+      isJumping = false;
+      
+      // Resetuj zmienne
+      score = 0;
+      gameSpeed = 0.2;
+      gameOver = false;
+      document.getElementById('score').innerText = 'Punkty: 0';
+    }
+
+    // Główna pętla gry
+    function animate() {
+      if (gameOver) {
+        if (confirm(`Koniec gry! Twój wynik: ${score}. Zagrać ponownie?`)) {
+          resetGame();
+        }
+        return;
+      }
+
+      requestAnimationFrame(animate);
+
+      // Grawitacja
+      player.position.y += velocityY;
+      velocityY -= gravity;
+      if (player.position.y <= 0) {
+        player.position.y = 0;
+        velocityY = 0;
+        isJumping = false;
+      }
+
+      // Poruszanie przeszkód
+      for (let i = obstacles.length - 1; i >= 0; i--) {
+        const obs = obstacles[i];
+        obs.position.x -= gameSpeed;
+
+        // Sprawdź kolizję
+        if (checkCollision(player, obs)) {
+          gameOver = true;
+        }
+
+        // Usuń przeszkody poza ekranem
+        if (obs.position.x < -15) {
+          scene.remove(obs);
+          obstacles.splice(i, 1);
+          score++;
+          document.getElementById('score').innerText = `Punkty: ${score}`;
+        }
+      }
+
+      // Generuj przeszkody
+      if (Math.random() < 0.02) {
+        createObstacle();
+      }
+
+      // Zwiększ trudność
+      gameSpeed += 0.0001;
+
+      renderer.render(scene, camera);
+    }
+
+    // Rozpocznij grę
+    animate();
+
+    // Responsywność
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
