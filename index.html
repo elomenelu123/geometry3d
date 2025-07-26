@@ -7,7 +7,7 @@
     body {
       margin: 0;
       overflow: hidden;
-      background: #111;
+      background: #000;
     }
     #gameContainer {
       position: relative;
@@ -18,71 +18,126 @@
       position: absolute;
       top: 20px;
       left: 20px;
-      color: white;
-      font-family: Arial, sans-serif;
+      color: #fff;
+      font-family: 'Arial', sans-serif;
       font-size: 24px;
       z-index: 10;
+      text-shadow: 2px 2px 4px #000;
     }
     #instructions {
       position: absolute;
       bottom: 20px;
       left: 20px;
-      color: white;
-      font-family: Arial, sans-serif;
+      color: #fff;
+      font-family: 'Arial', sans-serif;
       font-size: 16px;
       z-index: 10;
+      text-shadow: 2px 2px 4px #000;
     }
   </style>
 </head>
 <body>
   <div id="gameContainer">
     <div id="score">Punkty: 0</div>
-    <div id="instructions">Naciśnij SPACJĘ, aby skakać</div>
+    <div id="instructions">Naciśnij SPACJĘ lub ↑ aby skakać</div>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script>
     // Inicjalizacja sceny
     const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x1a1a2e);
+    
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    const renderer = new THREE.WebGLRenderer();
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
     document.getElementById('gameContainer').appendChild(renderer.domElement);
 
     // Światło
-    const light = new THREE.DirectionalLight(0xffffff, 1);
-    light.position.set(0, 10, 5);
-    scene.add(light);
+    const ambientLight = new THREE.AmbientLight(0x404040, 2);
+    scene.add(ambientLight);
 
-    // Gracz (sześcian)
-    const playerGeometry = new THREE.BoxGeometry(1, 1, 1);
-    const playerMaterial = new THREE.MeshPhongMaterial({ color: 0x00ff00 });
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+    directionalLight.position.set(5, 10, 7);
+    directionalLight.castShadow = true;
+    scene.add(directionalLight);
+
+    // Gracz (Geometry Dash style)
+    const playerGeometry = new THREE.BoxGeometry(0.8, 0.8, 0.8);
+    const playerMaterial = new THREE.MeshPhongMaterial({ 
+      color: 0x00ffff,
+      shininess: 100
+    });
     const player = new THREE.Mesh(playerGeometry, playerMaterial);
-    player.position.set(-5, 0, 0);
+    player.position.set(-3, 0.4, 0);
+    player.castShadow = true;
     scene.add(player);
 
     // Podłoga
-    const floorGeometry = new THREE.PlaneGeometry(100, 10);
-    const floorMaterial = new THREE.MeshPhongMaterial({ color: 0x333333, side: THREE.DoubleSide });
+    const floorGeometry = new THREE.PlaneGeometry(200, 10);
+    const floorMaterial = new THREE.MeshPhongMaterial({ 
+      color: 0x16213e,
+      side: THREE.DoubleSide 
+    });
     const floor = new THREE.Mesh(floorGeometry, floorMaterial);
     floor.rotation.x = Math.PI / 2;
-    floor.position.y = -1;
-    floor.position.z = -10;
+    floor.position.y = -0.1;
+    floor.position.z = -5;
+    floor.receiveShadow = true;
     scene.add(floor);
 
-    // Kamera
-    camera.position.set(0, 2, 5);
+    // Tablica przeszkód (jak w Geometry Dash)
+    const obstacles = [];
+    const obstaclePattern = [
+      { x: 5, y: 0, height: 2 },
+      { x: 8, y: 0, height: 1.5 },
+      { x: 12, y: 0, height: 2 },
+      { x: 15, y: 0, height: 1 },
+      { x: 18, y: 0, height: 2.5 },
+      { x: 22, y: 0, height: 1.8 },
+      { x: 25, y: 0, height: 2 },
+      { x: 28, y: 0, height: 1.2 },
+      { x: 32, y: 0, height: 2.2 },
+      { x: 35, y: 0, height: 1.5 },
+      { x: 38, y: 0, height: 2 },
+      { x: 42, y: 0, height: 1.7 },
+      { x: 45, y: 0, height: 2.3 },
+      { x: 48, y: 0, height: 1.4 },
+      { x: 52, y: 0, height: 2.1 }
+    ];
+
+    // Tworzenie przeszkód
+    obstaclePattern.forEach((obsData, index) => {
+      const geometry = new THREE.BoxGeometry(0.8, obsData.height, 0.8);
+      const material = new THREE.MeshPhongMaterial({ 
+        color: 0xff6b6b,
+        shininess: 50
+      });
+      const obstacle = new THREE.Mesh(geometry, material);
+      obstacle.position.set(obsData.x, obsData.height/2 - 0.1, 0);
+      obstacle.castShadow = true;
+      obstacle.receiveShadow = true;
+      scene.add(obstacle);
+      obstacles.push({
+        mesh: obstacle,
+        passed: false
+      });
+    });
+
+    // Kamera - podąża za graczem
+    camera.position.set(0, 3, 5);
     camera.lookAt(player.position);
 
     // Zmienne gry
     let isJumping = false;
     let velocityY = 0;
-    let gravity = 0.2;
-    let jumpPower = 0.5;
-    let obstacles = [];
+    let gravity = 0.03;
+    let jumpPower = 0.4;
     let score = 0;
-    let gameSpeed = 0.2;
+    let gameSpeed = 0.15;
     let gameOver = false;
+    let playerVelocityX = 0;
 
     // Obsługa skoku
     function jump() {
@@ -92,44 +147,41 @@
       }
     }
 
+    // Kontrolki
     window.addEventListener('keydown', (e) => {
-      if (e.code === 'Space') {
+      if ((e.code === 'Space' || e.code === 'ArrowUp') && !gameOver) {
         jump();
       }
     });
 
-    // Tworzenie przeszkód
-    function createObstacle() {
-      const geometry = new THREE.BoxGeometry(1, 2, 1);
-      const material = new THREE.MeshPhongMaterial({ color: 0xff0000 });
-      const obstacle = new THREE.Mesh(geometry, material);
-      obstacle.position.set(10, 0, -10);
-      scene.add(obstacle);
-      obstacles.push(obstacle);
-    }
+    // Touch support dla urządzeń mobilnych
+    window.addEventListener('touchstart', () => {
+      if (!gameOver) jump();
+    });
 
-    // Kolizja
-    function checkCollision(obj1, obj2) {
-      const box1 = new THREE.Box3().setFromObject(obj1);
-      const box2 = new THREE.Box3().setFromObject(obj2);
-      return box1.intersectsBox(box2);
+    // Kolizja AABB
+    function checkCollision(box1, box2) {
+      const box1BB = new THREE.Box3().setFromObject(box1);
+      const box2BB = new THREE.Box3().setFromObject(box2);
+      return box1BB.intersectsBox(box2BB);
     }
 
     // Reset gry
     function resetGame() {
-      // Usuń przeszkody
-      obstacles.forEach(obs => scene.remove(obs));
-      obstacles = [];
-      
-      // Resetuj gracza
-      player.position.y = 0;
+      player.position.set(-3, 0.4, 0);
       velocityY = 0;
       isJumping = false;
-      
-      // Resetuj zmienne
       score = 0;
-      gameSpeed = 0.2;
+      gameSpeed = 0.15;
       gameOver = false;
+      playerVelocityX = 0;
+      
+      // Reset przeszkód
+      obstacles.forEach((obs, index) => {
+        obs.mesh.position.x = obstaclePattern[index].x;
+        obs.passed = false;
+      });
+      
       document.getElementById('score').innerText = 'Punkty: 0';
     }
 
@@ -144,41 +196,40 @@
 
       requestAnimationFrame(animate);
 
-      // Grawitacja
+      // Grawitacja i skok
       player.position.y += velocityY;
       velocityY -= gravity;
-      if (player.position.y <= 0) {
-        player.position.y = 0;
+      
+      if (player.position.y <= 0.4) {
+        player.position.y = 0.4;
         velocityY = 0;
         isJumping = false;
       }
 
-      // Poruszanie przeszkód
-      for (let i = obstacles.length - 1; i >= 0; i--) {
-        const obs = obstacles[i];
-        obs.position.x -= gameSpeed;
+      // Ruch gracza (automatyczny)
+      player.position.x += gameSpeed;
 
+      // Aktualizacja kamery
+      camera.position.x = player.position.x;
+      camera.position.z = 5;
+      camera.lookAt(player.position.x, player.position.y, 0);
+
+      // Sprawdzanie kolizji i punktów
+      obstacles.forEach(obs => {
+        obs.mesh.position.x -= gameSpeed;
+        
         // Sprawdź kolizję
-        if (checkCollision(player, obs)) {
+        if (checkCollision(player, obs.mesh)) {
           gameOver = true;
         }
-
-        // Usuń przeszkody poza ekranem
-        if (obs.position.x < -15) {
-          scene.remove(obs);
-          obstacles.splice(i, 1);
+        
+        // Zliczanie punktów
+        if (!obs.passed && obs.mesh.position.x < player.position.x - 1) {
+          obs.passed = true;
           score++;
           document.getElementById('score').innerText = `Punkty: ${score}`;
         }
-      }
-
-      // Generuj przeszkody
-      if (Math.random() < 0.02) {
-        createObstacle();
-      }
-
-      // Zwiększ trudność
-      gameSpeed += 0.0001;
+      });
 
       renderer.render(scene, camera);
     }
