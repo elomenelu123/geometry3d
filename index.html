@@ -3,455 +3,115 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Subway Runner IO</title>
+    <title>Wirus Ptaków (Wizualizacja)</title>
     <style>
         body {
+            overflow: hidden; /* Ukrywa paski przewijania */
+            background-color: #333;
             margin: 0;
-            padding: 0;
+            font-family: Arial, sans-serif;
+            color: white;
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            font-family: Arial, sans-serif;
         }
-        
-        #gameContainer {
-            position: relative;
-            width: 800px;
-            height: 400px;
-            background: linear-gradient(to bottom, #87CEEB 0%, #98FB98 100%);
-            border: 3px solid #333;
-            border-radius: 10px;
-            overflow: hidden;
-        }
-        
-        #road {
-            position: absolute;
-            bottom: 0;
-            width: 100%;
-            height: 100px;
-            background: #444;
-            border-top: 5px solid #FFD700;
-        }
-        
-        .lane {
-            position: absolute;
-            bottom: 50px;
-            width: 100%;
-            height: 2px;
-            background: white;
-            opacity: 0.5;
-        }
-        
-        #player {
-            position: absolute;
-            width: 40px;
-            height: 60px;
-            background: #FF6B6B;
-            border-radius: 10px;
-            bottom: 100px;
-            left: 380px;
-            transition: all 0.3s ease;
-            z-index: 10;
-        }
-        
-        #player.jumping {
-            animation: jump 0.5s ease;
-        }
-        
-        #player.flipping {
-            animation: flip 0.5s ease;
-        }
-        
-        @keyframes jump {
-            50% { transform: translateY(-100px) rotateX(360deg); }
-        }
-        
-        @keyframes flip {
-            50% { transform: rotateZ(360deg); }
-        }
-        
-        #cop {
-            position: absolute;
-            width: 40px;
-            height: 60px;
-            background: #4169E1;
-            border-radius: 10px;
-            bottom: 100px;
-            left: 50px;
-            z-index: 9;
-        }
-        
-        .coin {
-            position: absolute;
-            width: 30px;
-            height: 30px;
-            background: #FFD700;
-            border-radius: 50%;
-            bottom: 120px;
-            animation: rotate 2s linear infinite;
-            box-shadow: 0 0 10px #FFD700;
-        }
-        
-        @keyframes rotate {
-            100% { transform: rotate(360deg); }
-        }
-        
-        .obstacle {
-            position: absolute;
-            width: 40px;
-            height: 40px;
-            background: #8B4513;
-            bottom: 100px;
-            border-radius: 5px;
-        }
-        
-        #ui {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            color: white;
-            font-size: 20px;
-            font-weight: bold;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-        }
-        
-        #gameOver {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.8);
-            color: white;
-            padding: 20px;
-            border-radius: 10px;
+
+        .bird-window {
+            position: absolute; /* Umożliwia swobodne rozmieszczanie */
+            background-color: rgba(50, 50, 50, 0.9);
+            border: 2px solid #555;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+            padding: 5px;
             text-align: center;
-            display: none;
-            z-index: 100;
+            user-select: none; /* Zapobiega zaznaczaniu tekstu */
+            pointer-events: none; /* Ignoruje zdarzenia myszy na oknie */
+            z-index: 1000; /* Zawsze na wierzchu */
+            overflow: hidden; /* Przytnij obraz jeśli jest za duży */
         }
-        
-        #shop {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: rgba(0,0,0,0.7);
-            color: white;
-            padding: 10px;
-            border-radius: 5px;
-            display: none;
+
+        .bird-window img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 0 auto;
+            border: 1px solid #777;
         }
-        
-        button {
-            background: #4CAF50;
+
+        .bird-window .title-bar {
+            background-color: #444;
             color: white;
-            border: none;
+            padding: 5px;
+            font-size: 0.8em;
+            margin-bottom: 5px;
+            cursor: default;
+        }
+
+        #info-message {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(255, 255, 0, 0.8);
+            color: black;
             padding: 10px 20px;
             border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            margin: 5px;
-        }
-        
-        button:hover {
-            background: #45a049;
-        }
-        
-        #startScreen {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.8);
-            color: white;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 200;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            z-index: 2000;
         }
     </style>
 </head>
 <body>
-    <div id="gameContainer">
-        <div id="road">
-            <div class="lane"></div>
-        </div>
-        
-        <div id="player"></div>
-        <div id="cop"></div>
-        
-        <div id="ui">
-            <div>💰 Monety: <span id="coins">0</span></div>
-            <div>📊 Level: <span id="level">1</span></div>
-            <div>❤️ Życia: <span id="lives">2</span></div>
-            <div>🏃 Dystans: <span id="distance">0</span>m</div>
-        </div>
-        
-        <div id="shop">
-            <h3>SKLEP</h3>
-            <button onclick="buyLevel()">Kup Level (50 monet)</button>
-            <button onclick="buyLife()">Kup Życie (30 monet)</button>
-            <button onclick="closeShop()">Zamknij</button>
-        </div>
-        
-        <div id="gameOver">
-            <h2>KONIEC GRY!</h2>
-            <p>Złapał cię policjant!</p>
-            <p>Dystans: <span id="finalDistance">0</span>m</p>
-            <p>Monety: <span id="finalCoins">0</span></p>
-            <button onclick="restartGame()">Zagraj ponownie</button>
-            <button onclick="openShop()">Sklep</button>
-        </div>
-        
-        <div id="startScreen">
-            <h1>🏃 SUBWAY RUNNER IO 🚔</h1>
-            <p>Uciekaj przed policjantem!</p>
-            <p>⬅️➡️ - Ruch | ⬆️ - Salto | ⬇️ - Fikołek</p>
-            <p>S - Sklep | P - Pauza</p>
-            <button onclick="startGame()">START</button>
-        </div>
+    <div id="info-message">
+        To jest tylko wizualizacja. Aby zamknąć, zamknij kartę przeglądarki.
     </div>
 
     <script>
-        let player = document.getElementById('player');
-        let cop = document.getElementById('cop');
-        let gameContainer = document.getElementById('gameContainer');
-        let startScreen = document.getElementById('startScreen');
-        let gameOverScreen = document.getElementById('gameOver');
-        let shopScreen = document.getElementById('shop');
-        
-        let playerPos = { x: 380, lane: 1 };
-        let copPos = { x: 50 };
-        let coins = 0;
-        let level = 1;
-        let lives = 2;
-        let distance = 0;
-        let gameRunning = false;
-        let speed = 2;
-        let obstacles = [];
-        let coinsArray = [];
-        
-        const lanes = [200, 380, 560];
-        
-        function startGame() {
-            startScreen.style.display = 'none';
-            gameRunning = true;
-            gameLoop();
-            spawnCoins();
-            spawnObstacles();
-            updateDistance();
+        const numberOfWindows = 15; // Ile okienek ma się pojawić
+        const imageUrls = [
+            'https://images.pexels.com/photos/326900/pexels-photo-326900.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', // Gołąb
+            'https://images.pexels.com/photos/1057409/pexels-photo-1057409.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', // Koliber
+            'https://images.pexels.com/photos/1661179/pexels-photo-1661179.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', // Sowa
+            'https://images.pexels.com/photos/1352485/pexels-photo-1352485.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', // Papuga
+            'https://images.pexels.com/photos/3920977/pexels-photo-3920977.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', // Rudzik
+            'https://images.pexels.com/photos/4591905/pexels-photo-4591905.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', // Łabędź
+            'https://images.pexels.com/photos/226177/pexels-photo-226177.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', // Bocian (przykładowo)
+            'https://images.pexels.com/photos/66898/pexels-photo-66898.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1' // Wróbel
+        ];
+
+        function createBirdWindow() {
+            const birdWindow = document.createElement('div');
+            birdWindow.className = 'bird-window';
+
+            const imageUrl = imageUrls[Math.floor(Math.random() * imageUrls.length)];
+            const img = document.createElement('img');
+            img.src = imageUrl;
+            img.alt = 'Obrazek ptaka';
+
+            const titleBar = document.createElement('div');
+            titleBar.className = 'title-bar';
+            titleBar.textContent = 'Komunikat: Ptak!'; // Losowy tekst paska tytułu
+
+            birdWindow.appendChild(titleBar);
+            birdWindow.appendChild(img);
+            document.body.appendChild(birdWindow);
+
+            // Ustawienie losowej pozycji i rozmiaru
+            const windowWidth = Math.floor(Math.random() * (300 - 150) + 150); // Od 150 do 300px
+            const windowHeight = 'auto'; // Wysokość automatycznie dopasowana do obrazu
+
+            const maxX = window.innerWidth - windowWidth;
+            const maxY = window.innerHeight - window.innerHeight * 0.15; // Zostaw trochę miejsca u góry
+
+            birdWindow.style.width = `${windowWidth}px`;
+            birdWindow.style.left = `${Math.random() * maxX}px`;
+            birdWindow.style.top = `${Math.random() * maxY}px`;
         }
-        
-        function gameLoop() {
-            if (!gameRunning) return;
-            
-            // Ruch policjanta
-            copPos.x += speed + (level * 0.5);
-            cop.style.left = copPos.x + 'px';
-            
-            // Sprawdź czy policjant złapał gracza
-            if (Math.abs(copPos.x - playerPos.x) < 30) {
-                if (lives > 0) {
-                    lives--;
-                    copPos.x = 50;
-                    updateUI();
-                    if (lives === 0) {
-                        endGame();
-                    }
-                } else {
-                    endGame();
-                }
-            }
-            
-            // Reset policjanta jeśli gracz uciekł daleko
-            if (playerPos.x - copPos.x > 300) {
-                copPos.x = playerPos.x - 250;
-            }
-            
-            // Aktualizuj monety
-            coinsArray.forEach((coin, index) => {
-                coin.x -= speed * 2;
-                coin.element.style.left = coin.x + 'px';
-                
-                // Zbierz monetę
-                if (Math.abs(coin.x - playerPos.x) < 30 && 
-                    Math.abs(coin.lane - playerPos.lane) === 0) {
-                    coins++;
-                    updateUI();
-                    coin.element.remove();
-                    coinsArray.splice(index, 1);
-                }
-                
-                // Usuń monetę poza ekranem
-                if (coin.x < -50) {
-                    coin.element.remove();
-                    coinsArray.splice(index, 1);
-                }
-            });
-            
-            // Aktualizuj przeszkody
-            obstacles.forEach((obstacle, index) => {
-                obstacle.x -= speed * 2;
-                obstacle.element.style.left = obstacle.x + 'px';
-                
-                // Kolizja z przeszkodą
-                if (Math.abs(obstacle.x - playerPos.x) < 30 && 
-                    Math.abs(obstacle.lane - playerPos.lane) === 0) {
-                    lives--;
-                    updateUI();
-                    obstacle.element.remove();
-                    obstacles.splice(index, 1);
-                    
-                    if (lives <= 0) {
-                        endGame();
-                    }
-                }
-                
-                // Usuń przeszkodę poza ekranem
-                if (obstacle.x < -50) {
-                    obstacle.element.remove();
-                    obstacles.splice(index, 1);
-                }
-            });
-            
-            requestAnimationFrame(gameLoop);
+
+        // Generuj okna
+        for (let i = 0; i < numberOfWindows; i++) {
+            setTimeout(createBirdWindow, i * 300); // Pojawiają się co 0.3 sekundy
         }
-        
-        function spawnCoins() {
-            if (!gameRunning) return;
-            
-            let coin = document.createElement('div');
-            coin.className = 'coin';
-            let lane = Math.floor(Math.random() * 3);
-            coin.style.left = '850px';
-            coin.style.left = '850px';
-            coin.style.bottom = (120 + lane * 40) + 'px';
-            gameContainer.appendChild(coin);
-            
-            coinsArray.push({
-                element: coin,
-                x: 850,
-                lane: lane
-            });
-            
-            setTimeout(spawnCoins, 2000 - (level * 100));
-        }
-        
-        function spawnObstacles() {
-            if (!gameRunning) return;
-            
-            let obstacle = document.createElement('div');
-            obstacle.className = 'obstacle';
-            let lane = Math.floor(Math.random() * 3);
-            obstacle.style.left = '850px';
-            obstacle.style.bottom = (100 + lane * 40) + 'px';
-            gameContainer.appendChild(obstacle);
-            
-            obstacles.push({
-                element: obstacle,
-                x: 850,
-                lane: lane
-            });
-            
-            setTimeout(spawnObstacles, 3000 - (level * 150));
-        }
-        
-        function updateDistance() {
-            if (!gameRunning) return;
-            distance += 1;
-            updateUI();
-            setTimeout(updateDistance, 100);
-        }
-        
-        function updateUI() {
-            document.getElementById('coins').textContent = coins;
-            document.getElementById('level').textContent = level;
-            document.getElementById('lives').textContent = lives;
-            document.getElementById('distance').textContent = distance;
-        }
-        
-        function endGame() {
-            gameRunning = false;
-            document.getElementById('finalDistance').textContent = distance;
-            document.getElementById('finalCoins').textContent = coins;
-            gameOverScreen.style.display = 'block';
-        }
-        
-        function restartGame() {
-            location.reload();
-        }
-        
-        function buyLevel() {
-            if (coins >= 50) {
-                coins -= 50;
-                level++;
-                speed += 1;
-                updateUI();
-                alert('Kupiłeś poziom ' + level + '!');
-            } else {
-                alert('Za mało monet!');
-            }
-        }
-        
-        function buyLife() {
-            if (coins >= 30) {
-                coins -= 30;
-                lives++;
-                updateUI();
-                alert('Kupiłeś dodatkowe życie!');
-            } else {
-                alert('Za mało monet!');
-            }
-        }
-        
-        function openShop() {
-            shopScreen.style.display = 'block';
-        }
-        
-        function closeShop() {
-            shopScreen.style.display = 'none';
-        }
-        
-        // Sterowanie
-        document.addEventListener('keydown', (e) => {
-            if (!gameRunning) return;
-            
-            switch(e.key) {
-                case 'ArrowLeft':
-                    if (playerPos.lane > 0) {
-                        playerPos.lane--;
-                        playerPos.x = lanes[playerPos.lane];
-                        player.style.left = playerPos.x + 'px';
-                    }
-                    break;
-                case 'ArrowRight':
-                    if (playerPos.lane < 2) {
-                        playerPos.lane++;
-                        playerPos.x = lanes[playerPos.lane];
-                        player.style.left = playerPos.x + 'px';
-                    }
-                    break;
-                case 'ArrowUp':
-                    player.classList.add('jumping');
-                    setTimeout(() => player.classList.remove('jumping'), 500);
-                    break;
-                case 'ArrowDown':
-                    player.classList.add('flipping');
-                    setTimeout(() => player.classList.remove('flipping'), 500);
-                    break;
-                case 's':
-                case 'S':
-                    openShop();
-                    break;
-                case 'p':
-                case 'P':
-                    gameRunning = !gameRunning;
-                    if (gameRunning) gameLoop();
-                    break;
-            }
-        });
     </script>
 </body>
 </html>
