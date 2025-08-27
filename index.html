@@ -1,248 +1,457 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-  <meta charset="UTF-8">
-  <title>Geometry Dash 3D</title>
-  <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-      background: #000;
-    }
-    #gameContainer {
-      position: relative;
-      width: 100vw;
-      height: 100vh;
-    }
-    #score {
-      position: absolute;
-      top: 20px;
-      left: 20px;
-      color: #fff;
-      font-family: 'Arial', sans-serif;
-      font-size: 24px;
-      z-index: 10;
-      text-shadow: 2px 2px 4px #000;
-    }
-    #instructions {
-      position: absolute;
-      bottom: 20px;
-      left: 20px;
-      color: #fff;
-      font-family: 'Arial', sans-serif;
-      font-size: 16px;
-      z-index: 10;
-      text-shadow: 2px 2px 4px #000;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subway Runner IO</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: Arial, sans-serif;
+        }
+        
+        #gameContainer {
+            position: relative;
+            width: 800px;
+            height: 400px;
+            background: linear-gradient(to bottom, #87CEEB 0%, #98FB98 100%);
+            border: 3px solid #333;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        #road {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 100px;
+            background: #444;
+            border-top: 5px solid #FFD700;
+        }
+        
+        .lane {
+            position: absolute;
+            bottom: 50px;
+            width: 100%;
+            height: 2px;
+            background: white;
+            opacity: 0.5;
+        }
+        
+        #player {
+            position: absolute;
+            width: 40px;
+            height: 60px;
+            background: #FF6B6B;
+            border-radius: 10px;
+            bottom: 100px;
+            left: 380px;
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+        
+        #player.jumping {
+            animation: jump 0.5s ease;
+        }
+        
+        #player.flipping {
+            animation: flip 0.5s ease;
+        }
+        
+        @keyframes jump {
+            50% { transform: translateY(-100px) rotateX(360deg); }
+        }
+        
+        @keyframes flip {
+            50% { transform: rotateZ(360deg); }
+        }
+        
+        #cop {
+            position: absolute;
+            width: 40px;
+            height: 60px;
+            background: #4169E1;
+            border-radius: 10px;
+            bottom: 100px;
+            left: 50px;
+            z-index: 9;
+        }
+        
+        .coin {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background: #FFD700;
+            border-radius: 50%;
+            bottom: 120px;
+            animation: rotate 2s linear infinite;
+            box-shadow: 0 0 10px #FFD700;
+        }
+        
+        @keyframes rotate {
+            100% { transform: rotate(360deg); }
+        }
+        
+        .obstacle {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: #8B4513;
+            bottom: 100px;
+            border-radius: 5px;
+        }
+        
+        #ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+            z-index: 100;
+        }
+        
+        #shop {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            display: none;
+        }
+        
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        
+        button:hover {
+            background: #45a049;
+        }
+        
+        #startScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+        }
+    </style>
 </head>
 <body>
-  <div id="gameContainer">
-    <div id="score">Punkty: 0</div>
-    <div id="instructions">Naciśnij SPACJĘ lub ↑ aby skakać</div>
-  </div>
-
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script>
-    // Inicjalizacja sceny
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x1a1a2e);
-    
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.shadowMap.enabled = true;
-    document.getElementById('gameContainer').appendChild(renderer.domElement);
-
-    // Światło
-    const ambientLight = new THREE.AmbientLight(0x404040, 2);
-    scene.add(ambientLight);
-
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-    directionalLight.position.set(5, 10, 7);
-    directionalLight.castShadow = true;
-    scene.add(directionalLight);
-
-    // Gracz (Geometry Dash style)
-    const playerGeometry = new THREE.BoxGeometry(0.8, 0.8, 0.8);
-    const playerMaterial = new THREE.MeshPhongMaterial({ 
-      color: 0x00ffff,
-      shininess: 100
-    });
-    const player = new THREE.Mesh(playerGeometry, playerMaterial);
-    player.position.set(-3, 0.4, 0);
-    player.castShadow = true;
-    scene.add(player);
-
-    // Podłoga
-    const floorGeometry = new THREE.PlaneGeometry(200, 10);
-    const floorMaterial = new THREE.MeshPhongMaterial({ 
-      color: 0x16213e,
-      side: THREE.DoubleSide 
-    });
-    const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-    floor.rotation.x = Math.PI / 2;
-    floor.position.y = -0.1;
-    floor.position.z = -5;
-    floor.receiveShadow = true;
-    scene.add(floor);
-
-    // Tablica przeszkód (jak w Geometry Dash)
-    const obstacles = [];
-    const obstaclePattern = [
-      { x: 5, y: 0, height: 2 },
-      { x: 8, y: 0, height: 1.5 },
-      { x: 12, y: 0, height: 2 },
-      { x: 15, y: 0, height: 1 },
-      { x: 18, y: 0, height: 2.5 },
-      { x: 22, y: 0, height: 1.8 },
-      { x: 25, y: 0, height: 2 },
-      { x: 28, y: 0, height: 1.2 },
-      { x: 32, y: 0, height: 2.2 },
-      { x: 35, y: 0, height: 1.5 },
-      { x: 38, y: 0, height: 2 },
-      { x: 42, y: 0, height: 1.7 },
-      { x: 45, y: 0, height: 2.3 },
-      { x: 48, y: 0, height: 1.4 },
-      { x: 52, y: 0, height: 2.1 }
-    ];
-
-    // Tworzenie przeszkód
-    obstaclePattern.forEach((obsData, index) => {
-      const geometry = new THREE.BoxGeometry(0.8, obsData.height, 0.8);
-      const material = new THREE.MeshPhongMaterial({ 
-        color: 0xff6b6b,
-        shininess: 50
-      });
-      const obstacle = new THREE.Mesh(geometry, material);
-      obstacle.position.set(obsData.x, obsData.height/2 - 0.1, 0);
-      obstacle.castShadow = true;
-      obstacle.receiveShadow = true;
-      scene.add(obstacle);
-      obstacles.push({
-        mesh: obstacle,
-        passed: false
-      });
-    });
-
-    // Kamera - podąża za graczem
-    camera.position.set(0, 3, 5);
-    camera.lookAt(player.position);
-
-    // Zmienne gry
-    let isJumping = false;
-    let velocityY = 0;
-    let gravity = 0.03;
-    let jumpPower = 0.4;
-    let score = 0;
-    let gameSpeed = 0.15;
-    let gameOver = false;
-    let playerVelocityX = 0;
-
-    // Obsługa skoku
-    function jump() {
-      if (!isJumping && !gameOver) {
-        velocityY = jumpPower;
-        isJumping = true;
-      }
-    }
-
-    // Kontrolki
-    window.addEventListener('keydown', (e) => {
-      if ((e.code === 'Space' || e.code === 'ArrowUp') && !gameOver) {
-        jump();
-      }
-    });
-
-    // Touch support dla urządzeń mobilnych
-    window.addEventListener('touchstart', () => {
-      if (!gameOver) jump();
-    });
-
-    // Kolizja AABB
-    function checkCollision(box1, box2) {
-      const box1BB = new THREE.Box3().setFromObject(box1);
-      const box2BB = new THREE.Box3().setFromObject(box2);
-      return box1BB.intersectsBox(box2BB);
-    }
-
-    // Reset gry
-    function resetGame() {
-      player.position.set(-3, 0.4, 0);
-      velocityY = 0;
-      isJumping = false;
-      score = 0;
-      gameSpeed = 0.15;
-      gameOver = false;
-      playerVelocityX = 0;
-      
-      // Reset przeszkód
-      obstacles.forEach((obs, index) => {
-        obs.mesh.position.x = obstaclePattern[index].x;
-        obs.passed = false;
-      });
-      
-      document.getElementById('score').innerText = 'Punkty: 0';
-    }
-
-    // Główna pętla gry
-    function animate() {
-      if (gameOver) {
-        if (confirm(`Koniec gry! Twój wynik: ${score}. Zagrać ponownie?`)) {
-          resetGame();
-        }
-        return;
-      }
-
-      requestAnimationFrame(animate);
-
-      // Grawitacja i skok
-      player.position.y += velocityY;
-      velocityY -= gravity;
-      
-      if (player.position.y <= 0.4) {
-        player.position.y = 0.4;
-        velocityY = 0;
-        isJumping = false;
-      }
-
-      // Ruch gracza (automatyczny)
-      player.position.x += gameSpeed;
-
-      // Aktualizacja kamery
-      camera.position.x = player.position.x;
-      camera.position.z = 5;
-      camera.lookAt(player.position.x, player.position.y, 0);
-
-      // Sprawdzanie kolizji i punktów
-      obstacles.forEach(obs => {
-        obs.mesh.position.x -= gameSpeed;
+    <div id="gameContainer">
+        <div id="road">
+            <div class="lane"></div>
+        </div>
         
-        // Sprawdź kolizję
-        if (checkCollision(player, obs.mesh)) {
-          gameOver = true;
+        <div id="player"></div>
+        <div id="cop"></div>
+        
+        <div id="ui">
+            <div>💰 Monety: <span id="coins">0</span></div>
+            <div>📊 Level: <span id="level">1</span></div>
+            <div>❤️ Życia: <span id="lives">2</span></div>
+            <div>🏃 Dystans: <span id="distance">0</span>m</div>
+        </div>
+        
+        <div id="shop">
+            <h3>SKLEP</h3>
+            <button onclick="buyLevel()">Kup Level (50 monet)</button>
+            <button onclick="buyLife()">Kup Życie (30 monet)</button>
+            <button onclick="closeShop()">Zamknij</button>
+        </div>
+        
+        <div id="gameOver">
+            <h2>KONIEC GRY!</h2>
+            <p>Złapał cię policjant!</p>
+            <p>Dystans: <span id="finalDistance">0</span>m</p>
+            <p>Monety: <span id="finalCoins">0</span></p>
+            <button onclick="restartGame()">Zagraj ponownie</button>
+            <button onclick="openShop()">Sklep</button>
+        </div>
+        
+        <div id="startScreen">
+            <h1>🏃 SUBWAY RUNNER IO 🚔</h1>
+            <p>Uciekaj przed policjantem!</p>
+            <p>⬅️➡️ - Ruch | ⬆️ - Salto | ⬇️ - Fikołek</p>
+            <p>S - Sklep | P - Pauza</p>
+            <button onclick="startGame()">START</button>
+        </div>
+    </div>
+
+    <script>
+        let player = document.getElementById('player');
+        let cop = document.getElementById('cop');
+        let gameContainer = document.getElementById('gameContainer');
+        let startScreen = document.getElementById('startScreen');
+        let gameOverScreen = document.getElementById('gameOver');
+        let shopScreen = document.getElementById('shop');
+        
+        let playerPos = { x: 380, lane: 1 };
+        let copPos = { x: 50 };
+        let coins = 0;
+        let level = 1;
+        let lives = 2;
+        let distance = 0;
+        let gameRunning = false;
+        let speed = 2;
+        let obstacles = [];
+        let coinsArray = [];
+        
+        const lanes = [200, 380, 560];
+        
+        function startGame() {
+            startScreen.style.display = 'none';
+            gameRunning = true;
+            gameLoop();
+            spawnCoins();
+            spawnObstacles();
+            updateDistance();
         }
         
-        // Zliczanie punktów
-        if (!obs.passed && obs.mesh.position.x < player.position.x - 1) {
-          obs.passed = true;
-          score++;
-          document.getElementById('score').innerText = `Punkty: ${score}`;
+        function gameLoop() {
+            if (!gameRunning) return;
+            
+            // Ruch policjanta
+            copPos.x += speed + (level * 0.5);
+            cop.style.left = copPos.x + 'px';
+            
+            // Sprawdź czy policjant złapał gracza
+            if (Math.abs(copPos.x - playerPos.x) < 30) {
+                if (lives > 0) {
+                    lives--;
+                    copPos.x = 50;
+                    updateUI();
+                    if (lives === 0) {
+                        endGame();
+                    }
+                } else {
+                    endGame();
+                }
+            }
+            
+            // Reset policjanta jeśli gracz uciekł daleko
+            if (playerPos.x - copPos.x > 300) {
+                copPos.x = playerPos.x - 250;
+            }
+            
+            // Aktualizuj monety
+            coinsArray.forEach((coin, index) => {
+                coin.x -= speed * 2;
+                coin.element.style.left = coin.x + 'px';
+                
+                // Zbierz monetę
+                if (Math.abs(coin.x - playerPos.x) < 30 && 
+                    Math.abs(coin.lane - playerPos.lane) === 0) {
+                    coins++;
+                    updateUI();
+                    coin.element.remove();
+                    coinsArray.splice(index, 1);
+                }
+                
+                // Usuń monetę poza ekranem
+                if (coin.x < -50) {
+                    coin.element.remove();
+                    coinsArray.splice(index, 1);
+                }
+            });
+            
+            // Aktualizuj przeszkody
+            obstacles.forEach((obstacle, index) => {
+                obstacle.x -= speed * 2;
+                obstacle.element.style.left = obstacle.x + 'px';
+                
+                // Kolizja z przeszkodą
+                if (Math.abs(obstacle.x - playerPos.x) < 30 && 
+                    Math.abs(obstacle.lane - playerPos.lane) === 0) {
+                    lives--;
+                    updateUI();
+                    obstacle.element.remove();
+                    obstacles.splice(index, 1);
+                    
+                    if (lives <= 0) {
+                        endGame();
+                    }
+                }
+                
+                // Usuń przeszkodę poza ekranem
+                if (obstacle.x < -50) {
+                    obstacle.element.remove();
+                    obstacles.splice(index, 1);
+                }
+            });
+            
+            requestAnimationFrame(gameLoop);
         }
-      });
-
-      renderer.render(scene, camera);
-    }
-
-    // Rozpocznij grę
-    animate();
-
-    // Responsywność
-    window.addEventListener('resize', () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    });
-  </script>
+        
+        function spawnCoins() {
+            if (!gameRunning) return;
+            
+            let coin = document.createElement('div');
+            coin.className = 'coin';
+            let lane = Math.floor(Math.random() * 3);
+            coin.style.left = '850px';
+            coin.style.left = '850px';
+            coin.style.bottom = (120 + lane * 40) + 'px';
+            gameContainer.appendChild(coin);
+            
+            coinsArray.push({
+                element: coin,
+                x: 850,
+                lane: lane
+            });
+            
+            setTimeout(spawnCoins, 2000 - (level * 100));
+        }
+        
+        function spawnObstacles() {
+            if (!gameRunning) return;
+            
+            let obstacle = document.createElement('div');
+            obstacle.className = 'obstacle';
+            let lane = Math.floor(Math.random() * 3);
+            obstacle.style.left = '850px';
+            obstacle.style.bottom = (100 + lane * 40) + 'px';
+            gameContainer.appendChild(obstacle);
+            
+            obstacles.push({
+                element: obstacle,
+                x: 850,
+                lane: lane
+            });
+            
+            setTimeout(spawnObstacles, 3000 - (level * 150));
+        }
+        
+        function updateDistance() {
+            if (!gameRunning) return;
+            distance += 1;
+            updateUI();
+            setTimeout(updateDistance, 100);
+        }
+        
+        function updateUI() {
+            document.getElementById('coins').textContent = coins;
+            document.getElementById('level').textContent = level;
+            document.getElementById('lives').textContent = lives;
+            document.getElementById('distance').textContent = distance;
+        }
+        
+        function endGame() {
+            gameRunning = false;
+            document.getElementById('finalDistance').textContent = distance;
+            document.getElementById('finalCoins').textContent = coins;
+            gameOverScreen.style.display = 'block';
+        }
+        
+        function restartGame() {
+            location.reload();
+        }
+        
+        function buyLevel() {
+            if (coins >= 50) {
+                coins -= 50;
+                level++;
+                speed += 1;
+                updateUI();
+                alert('Kupiłeś poziom ' + level + '!');
+            } else {
+                alert('Za mało monet!');
+            }
+        }
+        
+        function buyLife() {
+            if (coins >= 30) {
+                coins -= 30;
+                lives++;
+                updateUI();
+                alert('Kupiłeś dodatkowe życie!');
+            } else {
+                alert('Za mało monet!');
+            }
+        }
+        
+        function openShop() {
+            shopScreen.style.display = 'block';
+        }
+        
+        function closeShop() {
+            shopScreen.style.display = 'none';
+        }
+        
+        // Sterowanie
+        document.addEventListener('keydown', (e) => {
+            if (!gameRunning) return;
+            
+            switch(e.key) {
+                case 'ArrowLeft':
+                    if (playerPos.lane > 0) {
+                        playerPos.lane--;
+                        playerPos.x = lanes[playerPos.lane];
+                        player.style.left = playerPos.x + 'px';
+                    }
+                    break;
+                case 'ArrowRight':
+                    if (playerPos.lane < 2) {
+                        playerPos.lane++;
+                        playerPos.x = lanes[playerPos.lane];
+                        player.style.left = playerPos.x + 'px';
+                    }
+                    break;
+                case 'ArrowUp':
+                    player.classList.add('jumping');
+                    setTimeout(() => player.classList.remove('jumping'), 500);
+                    break;
+                case 'ArrowDown':
+                    player.classList.add('flipping');
+                    setTimeout(() => player.classList.remove('flipping'), 500);
+                    break;
+                case 's':
+                case 'S':
+                    openShop();
+                    break;
+                case 'p':
+                case 'P':
+                    gameRunning = !gameRunning;
+                    if (gameRunning) gameLoop();
+                    break;
+            }
+        });
+    </script>
 </body>
 </html>
